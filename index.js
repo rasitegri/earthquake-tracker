@@ -94,11 +94,9 @@ async function persistEarthquakes(db, earthquakeArr){
 async function getLastBiggestEarthquakes(db){
     let result = new Promise( (resolve, reject) =>{
         db.collection('records').find({}, {
-            limit: 10,
+            limit: 5,
             sort: {
-                "ML" : -1,
-                "date": -1,
-                "time": -1
+                "ML" : -1
             }
         }).toArray()
         .then( result => {
@@ -111,26 +109,103 @@ async function getLastBiggestEarthquakes(db){
     return result;
 }
 
-async function getBigEarthquakesToday(db, limit = 4.0){
+async function getBigEarthquakesToday(db, limit = 3.0){
+    const systemDate = new Date();
+    const turkeyDate = getTurkeyDateFromUtc(systemDate);
+    const turkeyDateStart = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    0, 0, 0, 0);
+    const turkeyDateEnd = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    23, 59, 59, 999);
+
+    const result = await getBigEarthquakesBetweenTimestamp(db, 
+                                                            turkeyDateStart.getTime(), 
+                                                            turkeyDateEnd.getTime(),
+                                                            limit
+                                                            );
+
+    return result;
+}
+
+async function getBigEarthquakesYesterday(db){
+    const systemDate = new Date();
+    systemDate.setDate(systemDate.getDate() - 1);
+    const turkeyDate = getTurkeyDateFromUtc(systemDate);
+    const turkeyDateStart = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    0, 0, 0, 0);
+    const turkeyDateEnd = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    23, 59, 59, 999);
+
+    const result = await getBigEarthquakesBetweenTimestamp(db, 
+                                                            turkeyDateStart.getTime(), 
+                                                            turkeyDateEnd.getTime(),
+                                                            3.0
+                                                            );
+
+    return result;
+}
+
+async function getBigEarthquakesThisWeek(db){
+    const systemDate = new Date();
+    const turkeyDate = getTurkeyDateFromUtc(systemDate);
+    const turkeyWeekDay = turkeyDate.getDay()==0?6:turkeyDate.getDay()-1;
+    const turkeyDaysNeededTillSunday = 6 - turkeyWeekDay;
+
+    const turkeyDateStart = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    0, 0, 0, 0);
+    turkeyDateStart.setDate( turkeyDateStart.getDate() - turkeyWeekDay );
+
+    const turkeyDateEnd = new Date(turkeyDate.getFullYear(), 
+                                    turkeyDate.getMonth(),
+                                    turkeyDate.getDate(),
+                                    23, 59, 59, 999);
+    turkeyDateEnd.setDate( turkeyDateEnd.getDate() + turkeyDaysNeededTillSunday );
+
+    const result = await getBigEarthquakesBetweenTimestamp(db, 
+                                                            turkeyDateStart.getTime(), 
+                                                            turkeyDateEnd.getTime(),
+                                                            3.0
+                                                            );
+
+    return result;
+}
+
+function getTurkeyDateFromUtc(date){
+    const localTimezoneDiffInMinutes = date.getTimezoneOffset();
+    const utcMs = date.getTime() + localTimezoneDiffInMinutes * 60000;
+
+    const turkeyTimezoneDiffInMsec = 3600000 * 3;
+
+    return new Date( utcMs + turkeyTimezoneDiffInMsec );
+}
+
+async function getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestamp, limit = 4.0){
     if(limit && (typeof limit == 'string')){
         limit = parseFloat(limit);
     }
-    let result = new Promise( (resolve, reject) =>{
-        const today = new Date();
-        const day = today.getDate().toString().padStart(2, '0');
-        const month = (today.getMonth() + 1).toString().padStart(2, '0');
-        const year = today.getFullYear().toString().padStart(4, '0');
-        const wantedDay = `${year}.${month}.${day}`;
+    const result = new Promise( (resolve, reject) =>{
         db.collection('records').find({
-            date: wantedDay,
+            timestamp: {
+                $gte: startTimestamp,
+                $lte: endTimestamp
+            },
             ML: {$gte: limit}
         }, 
         {
             limit: 5,
             sort: {
                 "ML" : -1,
-                "date" : -1,
-                "time" : -1
+                "date": -1,
+                "time": -1
             }
         }).toArray()
         .then( result => {
@@ -212,42 +287,23 @@ app.get('/today', (req, res) => {
 });
 
 app.get('/test', async (req, res) => {
-
     try{
-        const todayEarthquakes = await getBigEarthquakesToday(res.app.locals.db, 2.5);
+        const db = res.app.locals.db;
+        const allEarthquakes = await getLastBiggestEarthquakes(db);
+        const todayEarthquakes = await getBigEarthquakesToday(db);
+        const yesterdayEarthquakes = await getBigEarthquakesYesterday(db);
+        const weekEarthquakes = await getBigEarthquakesThisWeek(db);
         res.render('combined', {
-            title: "Earthquakes",
-            earthquakeList: todayEarthquakes
+            allList: allEarthquakes,
+            todayList: todayEarthquakes,
+            yesterdayList: yesterdayEarthquakes,
+            weekList: weekEarthquakes
         });
     }
     catch( err ){
         res.status(400);
         res.json({err});
     }
-    /*parseEarthquakes().then( (earthquakeArray) => {
-        persistEarthquakes(res.app.locals.db, earthquakeArray).then( (val) => {
-            getBigEarthquakesToday(res.app.locals.db, 2.5)
-            .then( (earthquakes) => {
-                res.render('combined', {
-                    title: "Earthquakes",
-                    earthquakeList: earthquakes
-                })
-            })
-            .catch( err => {
-                res.render('index', {
-                    title: "Oh no!"
-                })
-            })
-        })
-        .catch( (err) => {
-            res.status(400);
-            res.json({err});
-        });
-    })
-    .catch( (err) => {
-        res.status(400);
-        res.json({err});
-    });*/
 });
 
 app.use(bodyParser.urlencoded({extended: false}));
