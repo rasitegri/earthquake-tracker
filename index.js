@@ -121,7 +121,7 @@ async function getBigEarthquakesToday(db, limit = 3.0){
                                     turkeyDate.getDate(),
                                     23, 59, 59, 999);
 
-    const result = await getBigEarthquakesBetweenTimestamp(db, 
+    const result = await getBigEarthquakesBetweenTimestampSortedByDate(db, 
                                                             turkeyDateStart.getTime(), 
                                                             turkeyDateEnd.getTime(),
                                                             limit
@@ -188,10 +188,22 @@ function getTurkeyDateFromUtc(date){
     return new Date( utcMs + turkeyTimezoneDiffInMsec );
 }
 
-async function getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestamp, limit = 4.0){
+async function getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestamp, limit = 4.0, sortByDate = false){
     if(limit && (typeof limit == 'string')){
         limit = parseFloat(limit);
     }
+    let sortObject = {
+        "ML" : -1,
+    }
+
+    if( sortByDate && sortByDate === true ){
+        sortObject = {
+            "date": -1,
+            "time": -1,
+            "ML" : -1
+        };
+    }
+
     const result = new Promise( (resolve, reject) =>{
         db.collection('records').find({
             timestamp: {
@@ -202,11 +214,7 @@ async function getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestam
         }, 
         {
             limit: 5,
-            sort: {
-                "ML" : -1,
-                "date": -1,
-                "time": -1
-            }
+            sort: sortObject
         }).toArray()
         .then( result => {
             resolve( result );
@@ -218,6 +226,15 @@ async function getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestam
     return result;
 }
 
+async function getBigEarthquakesBetweenTimestampSortedByDate(db, startTimestamp, endTimestamp, limit = 4.0 ){
+    if(limit && (typeof limit == 'string')){
+        limit = parseFloat(limit);
+    }
+    const result = await getBigEarthquakesBetweenTimestamp(db, startTimestamp, endTimestamp, limit, true);
+    return result;
+}
+
+
 const app = express();
 
 const exphbs = Handlebars.create({
@@ -228,6 +245,16 @@ const exphbs = Handlebars.create({
         }
     }
 })
+
+async function updateEarthquakes(db){
+    try{
+        const earthquakeArray = await parseEarthquakes(db);
+        await persistEarthquakes(db, earthquakeArray);
+    } catch (err) {
+        console.log('Error occurred updating earthquakes:');
+        console.log(err);
+    }
+}
 
 app.engine('handlebars', exphbs.engine);
 app.set('view engine', 'handlebars');
@@ -289,6 +316,7 @@ app.get('/today', (req, res) => {
 app.get('/test', async (req, res) => {
     try{
         const db = res.app.locals.db;
+        updateEarthquakes(db);
         const allEarthquakes = await getLastBiggestEarthquakes(db);
         const todayEarthquakes = await getBigEarthquakesToday(db);
         const yesterdayEarthquakes = await getBigEarthquakesYesterday(db);
