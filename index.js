@@ -278,61 +278,7 @@ function updateEarthquakesPeriodically(db){
 app.engine('handlebars', exphbs.engine);
 app.set('view engine', 'handlebars');
 
-app.get('/', (req, res) => {
-    parseEarthquakes().then( (earthquakeArray) => {
-        persistEarthquakes(res.app.locals.db, earthquakeArray).then( (val) => {
-            getLastBiggestEarthquakes(res.app.locals.db)
-            .then( (earthquakes) => {
-                res.render('index', {
-                    title: "Earthquakes",
-                    earthquakeList: earthquakes
-                })
-            })
-            .catch( err => {
-                res.render('index', {
-                    title: "Oh no!"
-                })
-            })
-        })
-        .catch( (err) => {
-            res.status(400);
-            res.json({err});
-        });
-    })
-    .catch( (err) => {
-        res.status(400);
-        res.json({err});
-    });
-});
-
-app.get('/today', (req, res) => {
-    parseEarthquakes().then( (earthquakeArray) => {
-        persistEarthquakes(res.app.locals.db, earthquakeArray).then( (val) => {
-            getBigEarthquakesToday(res.app.locals.db)
-            .then( (earthquakes) => {
-                res.render('index', {
-                    title: "Earthquakes",
-                    earthquakeList: earthquakes
-                })
-            })
-            .catch( err => {
-                res.render('index', {
-                    title: "Oh no!"
-                })
-            })
-        })
-        .catch( (err) => {
-            res.status(400);
-            res.json({err});
-        });
-    })
-    .catch( (err) => {
-        res.status(400);
-        res.json({err});
-    });
-});
-
-app.get('/test', async (req, res) => {
+app.get('/', async (req, res) => {
     try{
         const db = res.app.locals.db;
         updateEarthquakes(db);
@@ -351,6 +297,10 @@ app.get('/test', async (req, res) => {
         res.status(400);
         res.json({err});
     }
+});
+
+app.get('*', async (req, res) => {
+    res.redirect('/');
 });
 
 app.use(bodyParser.urlencoded({extended: false}));
