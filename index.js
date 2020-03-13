@@ -6,6 +6,8 @@ const config = require('./config');
 const Handlebars = require('express-handlebars');
 const bodyParser = require('body-parser');
 
+const MS_DIFFERENCE_TURKEY_TIME = 3600000 * 3;
+
 function getEarthquakeObject(earthquakeLine){
     let object = {};
     if(typeof earthquakeLine === 'string'){
@@ -120,10 +122,12 @@ async function getBigEarthquakesToday(db, limit = 3.0){
                                     turkeyDate.getMonth(),
                                     turkeyDate.getDate(),
                                     23, 59, 59, 999);
+    const startDate = new Date(turkeyDateStart.getTime() - MS_DIFFERENCE_TURKEY_TIME );
+    const endDate = new Date(turkeyDateEnd.getTime() - MS_DIFFERENCE_TURKEY_TIME );
 
     const result = await getBigEarthquakesBetweenTimestampSortedByDate(db, 
-                                                            turkeyDateStart.getTime(), 
-                                                            turkeyDateEnd.getTime(),
+                                                            startDate.getTime(), 
+                                                            endDate.getTime(),
                                                             limit
                                                             );
 
@@ -143,9 +147,12 @@ async function getBigEarthquakesYesterday(db){
                                     turkeyDate.getDate(),
                                     23, 59, 59, 999);
 
+    const startDate = new Date(turkeyDateStart.getTime() - MS_DIFFERENCE_TURKEY_TIME );
+    const endDate = new Date(turkeyDateEnd.getTime() - MS_DIFFERENCE_TURKEY_TIME );
+                                
     const result = await getBigEarthquakesBetweenTimestamp(db, 
-                                                            turkeyDateStart.getTime(), 
-                                                            turkeyDateEnd.getTime(),
+                                                            startDate.getTime(), 
+                                                            endDate.getTime(),
                                                             3.0
                                                             );
 
@@ -170,9 +177,12 @@ async function getBigEarthquakesThisWeek(db){
                                     23, 59, 59, 999);
     turkeyDateEnd.setDate( turkeyDateEnd.getDate() + turkeyDaysNeededTillSunday );
 
+    const startDate = new Date(turkeyDateStart.getTime() - MS_DIFFERENCE_TURKEY_TIME );
+    const endDate = new Date(turkeyDateEnd.getTime() - MS_DIFFERENCE_TURKEY_TIME );
+      
     const result = await getBigEarthquakesBetweenTimestamp(db, 
-                                                            turkeyDateStart.getTime(), 
-                                                            turkeyDateEnd.getTime(),
+                                                            startDate.getTime(), 
+                                                            endDate.getTime(),
                                                             3.0
                                                             );
 
