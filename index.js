@@ -266,6 +266,15 @@ async function updateEarthquakes(db){
     }
 }
 
+function updateEarthquakesPeriodically(db){
+    updateEarthquakes(db);
+    setTimeout( () => {
+        updateEarthquakesPeriodically(db);
+    },
+    10 * 60 * 1000 // 10 Minutes
+    );
+}
+
 app.engine('handlebars', exphbs.engine);
 app.set('view engine', 'handlebars');
 
@@ -390,7 +399,8 @@ MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, (err, clie
     client.db('earthquake').collection('records').createIndex('dateAndPlace', {unique: true})
     .then( val => {
         app.listen(PORT, () => {
-            console.log(`Running at ${PORT}`)
+            console.log(`Running at ${PORT}`);
+            updateEarthquakesPeriodically(app.locals.db);
         });
     }).catch(err => {
         throw err;
