@@ -345,15 +345,22 @@ MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, (err, clie
     if(err){
         throw(err);
     }
+    const indexes = [
+        {
+            key: { "dateAndPlace" : 1},
+            unique: true
+        }
+    ];
     app.locals.db = client.db('earthquake');
-    client.db('earthquake').collection('records').createIndex('dateAndPlace', {unique: true})
+    client.db('earthquake').collection('records').createIndexes(indexes)
     .then( val => {
         app.listen(PORT, () => {
             console.log(`Running at ${PORT}`);
             updateEarthquakesPeriodically(app.locals.db);
         });
     }).catch(err => {
-        throw err;
+        console.log(err);
+        console.log("Good bye cruel world!");
     });
 });
 
