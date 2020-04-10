@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 const config = require('./config');
 
-MongoClient.connect("mongodb://45.76.33.242:27017/earthquake", { useUnifiedTopology: true }, async (err, client) => {
+MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, async (err, client) => {
     if(err){
         throw(err);
     }
