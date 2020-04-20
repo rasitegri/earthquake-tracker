@@ -19,8 +19,8 @@ MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, async (err
 			"count": {"$sum": 1}
 		}
 	};
-    const records = await collection.aggregate(sortQuery, groupQuery).toArray();
-    const validIdArray = records.map(entry => entry["_id"]);
+    const records = await collection.aggregate([sortQuery, groupQuery]).toArray();
+    const validIdArray = records.map(entry => entry["lastId"]);
     const deleteQuery = {
         "_id": {
             "$nin": validIdArray
@@ -28,5 +28,7 @@ MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, async (err
     };
     const resultOfDelete = await collection.deleteMany(deleteQuery);
     console.log(`Finished deleting ${resultOfDelete.result.n} documents`);
+    console.log("Closing connection...");
+    client.close();
 });
 

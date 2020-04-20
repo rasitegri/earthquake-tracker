@@ -342,6 +342,7 @@ app.post('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 MongoClient.connect(config.databaseUrl, { useUnifiedTopology: true }, (err, client) => {
+    console.log("Starting connection");
     if(err){
         throw(err);
     }
